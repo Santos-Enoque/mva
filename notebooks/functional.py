@@ -1,7 +1,4 @@
 import numpy as np
-from sklearn.decomposition import KernelPCA
-from sklearn.decomposition import KernelPCA
-from sklearn.metrics.pairwise import pairwise_kernels
 
 def pca(data, n_dims):
     data = data.T
@@ -16,6 +13,66 @@ def pca(data, n_dims):
 
 
 # Step 5: Select the top k eigenvectors
+    return V[:, -n_dims:]
+
+def rff_gaussian(X, n_components, gamma):
+    n_features = X.shape[1]
+    W = np.random.normal(0, np.sqrt(2 * gamma), (n_features, n_components))
+    b = np.random.uniform(0, 2 * np.pi, n_components)
+    Z = np.sqrt(2.0 / n_components) * np.cos(X.dot(W) + b)
+    return Z
+
+def rffkmsm(data, n_dims):
+    # Assume 'data' is your original matrix with samples in rows and features in columns
+
+    # Standardize the data
+    standardized_data = data 
+
+    # Map the data using RFF
+    gamma = 1 / data.shape[1]  # Set the gamma parameter for the Gaussian kernel
+    n_components = n_dims  # Set the number of random features for RFF
+    Z = rff_gaussian(standardized_data, n_components, gamma)
+
+    # Calculate the approximate kernel matrix
+    approx_kernel_matrix = Z.dot(Z.T)
+
+    # Center the approximate kernel matrix
+    row_mean = np.mean(approx_kernel_matrix, axis=0)
+    col_mean = np.mean(approx_kernel_matrix, axis=1)
+    matrix_mean = np.mean(approx_kernel_matrix)
+    centered_approx_kernel_matrix = approx_kernel_matrix - row_mean - col_mean[:, np.newaxis] + matrix_mean
+
+    # Compute the eigenvalues and eigenvectors of the centered approximate kernel matrix
+    _, V = np.linalg.eigh(centered_approx_kernel_matrix)
+    # Step 5: Select the top k eigenvectors
+    return V[:, -n_dims:]
+
+def gaussian_kernel(x, y, gamma):
+    return np.exp(-gamma * np.linalg.norm(x - y)**2)
+
+def kmsm(data, n_dims):
+
+    # data = data.T
+
+    # Step 1: Calculate the kernel matrix
+    n_samples = data.shape[0]
+    kernel_matrix = np.zeros((n_samples, n_samples))
+    gamma = 1 / data.shape[1]
+
+    for i in range(n_samples):
+        for j in range(n_samples):
+            kernel_matrix[i, j] = gaussian_kernel(data[i], data[j], gamma)
+
+    # Step 2: Center the kernel matrix
+    row_mean = np.mean(kernel_matrix, axis=0)
+    col_mean = np.mean(kernel_matrix, axis=1)
+    matrix_mean = np.mean(kernel_matrix)
+    centered_kernel_matrix = kernel_matrix - row_mean - col_mean[:, np.newaxis] + matrix_mean
+
+    # Step 3: Compute the eigenvalues and eigenvectors of the centered kernel matrix
+    _, V = np.linalg.eigh(centered_kernel_matrix)
+
+    # Step 5: Select the top k eigenvectors
     return V[:, -n_dims:]
 
 def cosine_similarities(X, subspace_bases):
