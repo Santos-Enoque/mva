@@ -1,10 +1,11 @@
 import numpy as np
 
+
 def pca(data, n_dims):
     data = data.T
 # Step 1: Standardize the data
     mean = np.mean(data, axis=0)
-    standardized_data = (data - mean) 
+    standardized_data = (data - mean)
 # Step 2: Calculate the covariance matrix
     cov_matrix = np.cov(standardized_data.T)
 
@@ -15,6 +16,7 @@ def pca(data, n_dims):
 # Step 5: Select the top k eigenvectors
     return V[:, -n_dims:]
 
+
 def rff_gaussian(X, n_components, gamma):
     n_features = X.shape[1]
     W = np.random.normal(0, np.sqrt(2 * gamma), (n_features, n_components))
@@ -22,14 +24,16 @@ def rff_gaussian(X, n_components, gamma):
     Z = np.sqrt(2.0 / n_components) * np.cos(X.dot(W) + b)
     return Z
 
+
 def rffkmsm(data, n_dims):
     # Assume 'data' is your original matrix with samples in rows and features in columns
 
     # Standardize the data
-    standardized_data = data 
+    standardized_data = data
 
     # Map the data using RFF
-    gamma = 1 / data.shape[1]  # Set the gamma parameter for the Gaussian kernel
+    # Set the gamma parameter for the Gaussian kernel
+    gamma = 1 / data.shape[1]
     n_components = n_dims  # Set the number of random features for RFF
     Z = rff_gaussian(standardized_data, n_components, gamma)
 
@@ -40,40 +44,52 @@ def rffkmsm(data, n_dims):
     row_mean = np.mean(approx_kernel_matrix, axis=0)
     col_mean = np.mean(approx_kernel_matrix, axis=1)
     matrix_mean = np.mean(approx_kernel_matrix)
-    centered_approx_kernel_matrix = approx_kernel_matrix - row_mean - col_mean[:, np.newaxis] + matrix_mean
+    centered_approx_kernel_matrix = approx_kernel_matrix - \
+        row_mean - col_mean[:, np.newaxis] + matrix_mean
 
     # Compute the eigenvalues and eigenvectors of the centered approximate kernel matrix
     _, V = np.linalg.eigh(centered_approx_kernel_matrix)
     # Step 5: Select the top k eigenvectors
     return V[:, -n_dims:]
 
+
 def gaussian_kernel(x, y, gamma):
     return np.exp(-gamma * np.linalg.norm(x - y)**2)
 
-def kmsm(data, n_dims):
 
-    # data = data.T
+def standardize(data):
+    mean = np.mean(data, axis=0)
+    std_dev = np.std(data, axis=0)
+    return (data - mean) / std_dev
+
+
+def kmsm(data, n_dims):
+    # Standardize the data
+    standardized_data = standardize(data)
 
     # Step 1: Calculate the kernel matrix
-    n_samples = data.shape[0]
+    n_samples = standardized_data.shape[0]
     kernel_matrix = np.zeros((n_samples, n_samples))
-    gamma = 1 / data.shape[1]
+    gamma = 1 / standardized_data.shape[1]  # Consider tuning this parameter
 
     for i in range(n_samples):
         for j in range(n_samples):
-            kernel_matrix[i, j] = gaussian_kernel(data[i], data[j], gamma)
+            kernel_matrix[i, j] = gaussian_kernel(
+                standardized_data[i], standardized_data[j], gamma)
 
     # Step 2: Center the kernel matrix
     row_mean = np.mean(kernel_matrix, axis=0)
     col_mean = np.mean(kernel_matrix, axis=1)
     matrix_mean = np.mean(kernel_matrix)
-    centered_kernel_matrix = kernel_matrix - row_mean - col_mean[:, np.newaxis] + matrix_mean
+    centered_kernel_matrix = kernel_matrix - \
+        row_mean - col_mean[:, np.newaxis] + matrix_mean
 
     # Step 3: Compute the eigenvalues and eigenvectors of the centered kernel matrix
     _, V = np.linalg.eigh(centered_kernel_matrix)
 
     # Step 5: Select the top k eigenvectors
     return V[:, -n_dims:]
+
 
 def cosine_similarities(X, subspace_bases):
     """
@@ -123,6 +139,3 @@ def canonical_angles(gramian):
     # cosines = np.linalg.norm(g)  # Frobenius norm, more straight-forward way to implement
 
     return cosines
-
-
-
